@@ -10,7 +10,7 @@ dotenv.config();
 
 nconf.env().required(["twitter_consumer_key", "twitter_consumer_secret"]);
 
-const cache = new NodeCache();
+const cache = new NodeCache({stdTTL: 1000 * 60* 15});
 
 async function getBearerToken() {
     const tokenUrl = "https://api.twitter.com/oauth2/token";
@@ -38,6 +38,10 @@ async function getTwitter() {
     return twitter;
 }
 
+function getUserTimeline(twitter: Twitter, screen_name: string) {
+    return twitter.get('statuses/user_timeline.json', {screen_name: screen_name, tweet_mode: 'extended'});
+}
+
 async function main() {
     const twitter = await getTwitter();
 
@@ -53,11 +57,11 @@ async function main() {
         method: 'GET',
         path: '/feed/{screen_name}',
         handler: async (request) => {
-            console.log('here');
-            const response = await twitter.get('statuses/user_timeline.json', {screen_name: request.params.screen_name, tweet_mode: 'extended'});
+            const cachedTimeline = cache.get(request.params.screen_name);
+            const timeline: Twitter.ResponseData = cachedTimeline ? cachedTimeline : await getUserTimeline(twitter, request.params.screen_name);
+            if (!cachedTimeline) cache.set(request.params.screen_name, timeline);
 
-            console.log(response);
-            response.forEach(tweet => console.log(tweet.entities.hashtags));
+            console.log(timeline);
 
             const feed = new RSS({
                 title: `Twitter @${request.params.screen_name}`,
@@ -66,7 +70,7 @@ async function main() {
                 ttl: 1000 * 60 * 15
             });
 
-            response.forEach(tweet => feed.item({
+            timeline.forEach(tweet => feed.item({
                 title: null,
                 date: tweet.created_at,
                 description: tweet.retweeted_status ? '🔁' + tweet.retweeted_status.full_text : tweet.full_text,
