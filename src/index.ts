@@ -40,7 +40,7 @@ async function getTwitter() {
 }
 
 function getUserTimeline(twitter: Twitter, screen_name: string) {
-    return twitter.get('statuses/user_timeline.json', {screen_name: screen_name, tweet_mode: 'extended'});
+    return twitter.get('statuses/user_timeline.json', {screen_name: screen_name, tweet_mode: 'extended', count: 200});
 }
 
 async function main() {
