@@ -70,7 +70,7 @@ async function main() {
                 title: `Twitter @${request.params.screen_name}`,
                 feed_url: '',
                 site_url: '',
-                ttl: 1000 * 60 * 15
+                ttl: 15
             });
 
             timeline.forEach((tweet: any) => feed.item({
