@@ -1,10 +1,11 @@
 import axios from "axios";
 import * as dotenv from "dotenv";
 import * as Hapi from '@hapi/hapi';
-import * as nconf from "nconf";
-import * as NodeCache from 'node-cache';
-import * as RSS from 'rss';
-import * as Twitter from 'twitter';
+import * as Inert from '@hapi/inert';
+import nconf from "nconf";
+import NodeCache from 'node-cache';
+import RSS from 'rss';
+import Twitter from 'twitter';
 
 dotenv.config();
 
@@ -53,11 +54,13 @@ async function main() {
         }
     });
 
+    await server.register(Inert);
+
     server.route({
         method: 'GET',
         path: '/feed/{screen_name}',
         handler: async (request) => {
-            const cachedTimeline = cache.get(request.params.screen_name);
+            const cachedTimeline: Twitter.ResponseData | undefined = cache.get(request.params.screen_name);
             const timeline: Twitter.ResponseData = cachedTimeline ? cachedTimeline : await getUserTimeline(twitter, request.params.screen_name);
             if (!cachedTimeline) cache.set(request.params.screen_name, timeline);
 
@@ -65,21 +68,32 @@ async function main() {
 
             const feed = new RSS({
                 title: `Twitter @${request.params.screen_name}`,
-                feed_url: null,
-                site_url: null,
+                feed_url: '',
+                site_url: '',
                 ttl: 1000 * 60 * 15
             });
 
-            timeline.forEach(tweet => feed.item({
-                title: null,
+            timeline.forEach((tweet: any) => feed.item({
+                title: '',
                 date: tweet.created_at,
                 description: tweet.retweeted_status ? '🔁' + tweet.retweeted_status.full_text : tweet.full_text,
                 guid: tweet.id_str,
                 url: `http://twitter.com/${request.params.screen_name}/status/${tweet.id_str}`,
-                categories: tweet.entities.hashtags.map(hashtag => hashtag.text)
+                categories: tweet.entities.hashtags.map((hashtag: any) => hashtag.text)
             }));
 
             return feed.xml({indent: true});
+        }
+    });
+
+    server.route({
+        method: 'GET',
+        path: '/{param*}',
+        handler: {
+            directory: {
+                path: './public',
+                index: ['index.html']
+            }
         }
     });
 
