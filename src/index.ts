@@ -11,7 +11,7 @@ dotenv.config();
 
 nconf.env().required(["twitter_consumer_key", "twitter_consumer_secret"]);
 
-const cache = new NodeCache({stdTTL: 1000 * 60* 15});
+const cache = new NodeCache({stdTTL: 60 * 15});
 
 async function getBearerToken() {
     const tokenUrl = "https://api.twitter.com/oauth2/token";
